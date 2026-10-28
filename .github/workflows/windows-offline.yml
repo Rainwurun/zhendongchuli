@@ -1,0 +1,37 @@
+name: Build Windows offline portable package
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  windows-x64:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: x64
+      - name: Extract reviewed source archive
+        shell: pwsh
+        run: Expand-Archive -LiteralPath VibrationLab-1.6.1-Windows-x64-build-kit-cloud-ready.zip -DestinationPath source
+      - name: Build self-contained portable application
+        working-directory: source
+        run: python packaging/build_windows.py
+      - name: Upload portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: VibrationLab-1.6.1-Windows-x64-offline
+          path: source/outputs/*-windows-x64.zip
+          if-no-files-found: error
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-build-diagnostics
+          path: |
+            source/work/build-windows.log
+            source/outputs/*-windows-x64/acceptance.json
